@@ -1,8 +1,9 @@
 import numpy as np
 from config import END_POSITION, PICKLE_DATA, PREDICT_LEN, START_POSITION, UNIX_MONTH
 from src.dataset import TsData
-from src.optimizer import Optimizer, plot_situation
+from src.optimizer import Optimizer
 from src.portfolio import Portfolio
+from src.utils.plots import plot_situation
 
 
 if __name__ == '__main__':

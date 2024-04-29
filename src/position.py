@@ -4,18 +4,18 @@ from src.utils.utils import cash2qty, qty2cash, compute_returns
 class Position:
     """
     A class to represent a trading position.
-    :ivar int entry_date: The date of the entry.
-    :ivar float entry_price: The price of the asset at the entry.
-    :ivar float entry_cash: The cash spent to buy the asset.
-    :ivar float quantity: The quantity of the asset bought.
-    :ivar int schedueled_exit_date: The date of the scheduled exit.
-    :ivar float scheduled_exit_price: The price of the asset at the scheduled exit.
-    :ivar float scheduled_returns: The returns at the scheduled exit.
+    :ivar int entry_date: The date the position was bought.
+    :ivar float entry_price: The price the asset was bought at.
+    :ivar float entry_cash: The cash spent to enter the position.
+    :ivar float quantity: The quantity of asset bought.
+    :ivar int schedueled_exit_date: The date the position is expected to be sold.
+    :ivar float scheduled_exit_price: The price the asset is expected to be sold at.
+    :ivar float scheduled_returns: The expected returns at the scheduled exit.
     :ivar float stop_loss: The stop loss percentage.
-    :ivar int exit_date: The date of the exit.
-    :ivar float exit_price: The price of the asset at the exit.
+    :ivar int exit_date: The date the position was sold.
+    :ivar float exit_price: The price the asset was sold at.
     :ivar float exit_cash: The cash obtained from selling the asset.
-    :ivar float returns: The cash returns.
+    :ivar float returns: The returns obtained from selling the asset.
     """
     def __init__(self):
         """
@@ -42,9 +42,6 @@ class Position:
         self.exit_price = None  # Exit price
         self.exit_cash = None  # Exit cash obtained
         self.returns = None  # Cash returns
-        
-        # Generate a unique Position ID without using the UUID module
-        self.id = id(self)
     
     def active(self):
         """

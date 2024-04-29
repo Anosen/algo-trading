@@ -6,6 +6,15 @@ from src.utils.utils import cash2qty, compute_returns
 class Portfolio:
     """
     A class to represent a trading portfolio of positions.
+    :ivar float cash: The cash currently available.
+    :ivar float initial_cash: The initial cash deposited.
+    :ivar List[float] cash_list: The list of cash values over time.
+    :ivar float crypto: The crypto currently held.
+    :ivar List[float] crypto_list: The list of crypto values over time.
+    :ivar List[Position] position_list: The list of positions held.
+    :ivar int trades: The number of trades.
+    :ivar List[float] portfolio_value_list: The list of portfolio values over time.
+    :ivar List[float] portfolio_returns_list: The list of portfolio returns over time.
     """
     
     def __init__(self, cash=1000.0, crypto=0.0):
