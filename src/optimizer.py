@@ -49,10 +49,10 @@ class Optimizer():
             predict_fees = [self.fee for _ in range(len(predict_prices))]
             
             self.portfolio.update(past_prices=past_prices,
-                             predict_prices=predict_prices,
-                             past_fees=past_fees,
-                             predict_fees=predict_fees,
-                             )
+                                  predict_prices=predict_prices,
+                                  past_fees=past_fees,
+                                  predict_fees=predict_fees,
+                                  )
             
             if self.verbose:
                 print(f'End: Cash: {self.portfolio.cash} | '
