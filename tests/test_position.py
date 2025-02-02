@@ -1,5 +1,5 @@
 import unittest
-from config import PICKLE_DATA
+from config import config
 from src.dataset import TsData
 from src.position import Position
 
@@ -8,7 +8,7 @@ class TestPosition(unittest.TestCase):
     A Unittest class to test the Position class.
     """
     def setUp(self):
-        self.data = TsData(pickle_file=PICKLE_DATA)
+        self.data = TsData(pickle_file=config['data']['pickle_file'])
         self.position = Position()
     
     def test_init(self):

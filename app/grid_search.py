@@ -1,9 +1,12 @@
 import argparse
+from pathlib import Path
+
 from src.simulation import estimate_returns
-from config import RESULTS_DIR, DATA_TYPE
+from config import config
 import itertools
 import pandas as pd
 from joblib import Parallel, delayed
+from multiprocessing import Queue, Process
 import os
 
 def parse_args():
@@ -23,6 +26,11 @@ def parse_args():
     parser.add_argument("--plot_results", action="store_true", help="Whether to plot the results of the grid search")
 
     return parser.parse_args()
+
+
+def run(*kargs, **kwargs):
+    pass
+
 
 if __name__ == '__main__':
     args = parse_args()
@@ -50,26 +58,59 @@ if __name__ == '__main__':
         min_expected_returns_list, stop_loss_list, verbose_list, short_verbose_list, plot_results_list
     ))
 
+    # Define the save path
+    results_dir = Path(f'{config["results_dir"]}/{config["data"]["type"]}/grid-search')
+    results_dir.mkdir(parents=True, exist_ok=True)
+    csv_save_path = results_dir / "grid-search-results.csv"
+
+    # Ensure unique filename if file already exists
+    counter = 1
+    while csv_save_path.exists():
+        csv_save_path = results_dir / f"grid-search-results_{counter}.csv"
+        counter += 1
+
+    # Define a queue for parallel writing
+    result_queue = Queue()
+
+
+    # Define a writer function that runs in a separate process
+    def csv_writer(queue, save_path):
+        """ Continuously writes results from the queue to the CSV file. """
+        file_exists = save_path.exists()
+        while True:
+            result = queue.get()
+            if result is None:  # Sentinel value to stop
+                break
+            df = pd.DataFrame([result])
+            df.to_csv(save_path, mode='a', header=not file_exists, index=False)
+            file_exists = True  # Ensure header is written only once
+
+
+    # Start the writer process
+    writer_process = Process(target=csv_writer, args=(result_queue, csv_save_path))
+    writer_process.start()
+
+
     # Define wrapper function
-    def run_estimate(params):
-        return {
+    def run_estimate(params, queue):
+        """ Runs the estimation and sends the result to the queue. """
+        result = {
             "predict_len": params[0], "init_cash": params[1], "init_crypto": params[2],
             "fee": params[3], "min_expected_returns": params[4], "stop_loss": params[5],
-            "verbose": params[6], "short-verbose": params[7], "plot_results": params[8], "returns": estimate_returns(*params)
+            "verbose": params[6], "short-verbose": params[7], "plot_results": params[8],
+            "returns": estimate_returns(*params)
         }
+        queue.put(result)  # Send result to writer process
+        return result
 
-    # Run in parallel
-    results = Parallel(n_jobs=-1)(delayed(run_estimate)(params) for params in param_combinations)
 
-    # Convert results to DataFrame
-    df = pd.DataFrame(results)
+    # Run in parallel without waiting for writing
+    results = Parallel(n_jobs=-1, backend="threading")(
+        delayed(run_estimate)(params, result_queue) for params in param_combinations
+    )
 
-    # Save results
-    csv_save_path = f'{RESULTS_DIR}/{DATA_TYPE}/grid-search/grid-search-results_1.csv'
-    # Increment filename if it already exists
-    counter = 1
-    while os.path.exists(csv_save_path):
-        csv_save_path = csv_save_path.with_stem(f"{csv_save_path.stem}_{counter}")
-        counter += 1
-    df.to_csv(csv_save_path, index=False)
+    # Signal the writer process to stop
+    result_queue.put(None)
+    writer_process.join()  # Ensure all results are written before exiting
+
     print(f'Grid search results saved to {csv_save_path}')

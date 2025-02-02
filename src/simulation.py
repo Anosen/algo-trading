@@ -1,6 +1,6 @@
 import os
 
-from config import PICKLE_DATA, START_POSITION, END_POSITION, RESULTS_DIR, DATA_TYPE
+from config import config
 from src.dataset import TsData
 from src.optimizer import Optimizer
 from src.policy import Policy
@@ -23,10 +23,10 @@ def estimate_returns(predict_len, init_cash, init_crypto, fee, min_expected_retu
         plot_results (bool): whether to plot results and save in the results folder
     """
     # Load data
-    data = TsData(pickle_file=PICKLE_DATA).data
+    data = TsData(pickle_file=config['data']['pickle_file']).data
 
     # Trim data
-    data = data.iloc[START_POSITION:END_POSITION]
+    data = data.iloc[config['data']['start_position']:config['data']['end_position']]
 
     # Create a portfolio
     portfolio = Portfolio(cash=init_cash, crypto=init_crypto)
@@ -60,7 +60,7 @@ def estimate_returns(predict_len, init_cash, init_crypto, fee, min_expected_retu
 
     if plot_results:
         # Plot the portfolio evolution
-        save_path = f'{RESULTS_DIR}/{DATA_TYPE}/fee{fee}/pred{predict_len}/portfolio-returns.png'
+        save_path = f'{config["results_dir"]}/{config["data"]["type"]}/fee{fee}/pred{predict_len}/portfolio-returns.png'
         os.makedirs(os.path.dirname(save_path), exist_ok=True)  # Create the folder
         plot_situation(data[:-1], portfolio, predict_len=predict_len, hold_fig=True, save_path=save_path)
 

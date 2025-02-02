@@ -21,9 +21,10 @@ def parse_args():
 
     return parser.parse_args()
 
-if __name__ == '__main__':
-    args = parse_args()
+def run(*kargs, **kwargs):
+    pass
 
+if __name__ == '__main__':
     # fee = 0.5
     # init_cash = 5000.0
     # init_crypto = 0.0
@@ -31,11 +32,13 @@ if __name__ == '__main__':
     # stop_loss = -2.0
     # predict_len = 50
 
+    args = parse_args()
+
     fee = float(args.fee)  # TODO: Separate the fee in a MAKER_FEE and a TAKER_FEE for selling and buying
     init_cash = float(args.init_cash)
     init_crypto = float(args.init_crypto)
     min_expected_returns = float(args.min_expected_returns)
-    stop_loss = float(args.stop_loss)
+    stop_loss = float(args.stop_loss)  # TODO: Also implement a take-profit and exposure control
     predict_len = int(args.predict_len)  # TODO: Add a true forecasting model
 
     print(f'Model prediction capacity: {predict_len} timesteps in the future')

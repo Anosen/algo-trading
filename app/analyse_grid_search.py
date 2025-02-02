@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from config import RESULTS_DIR, DATA_TYPE
+from config import config
 
 
-def analyse_grid_search(csv_path, save_path=None):
+def run(csv_path, save_path=None):
     """ Analyse the grid search results
 
     Args:
@@ -23,14 +23,14 @@ def analyse_grid_search(csv_path, save_path=None):
     # Pairplot to show relationships between parameters
     sns.pairplot(df, vars=parameters,
                  hue=target_metric, palette="coolwarm")
-    plt.savefig(f'{save_path}/pair-plot.png')
+    plt.savefig(f'{save_path}/pair-plot.png') if save_path else plt.show()
     plt.close()
 
     # Correlation heatmap
     plt.figure(figsize=(10, 6))
     sns.heatmap(df.corr(), annot=True, cmap="coolwarm", fmt=".2f")
     plt.title("Correlation Heatmap of Parameters and Result")
-    plt.savefig(f'{save_path}/heatmap.png')
+    plt.savefig(f'{save_path}/heatmap.png') if save_path else plt.show()
     plt.close()
 
     # Plot each parameter vs. results
@@ -40,7 +40,7 @@ def analyse_grid_search(csv_path, save_path=None):
         plt.title(f"{target_metric} vs {param}")
         plt.xlabel(param)
         plt.ylabel(target_metric)
-        plt.savefig(f'{save_path}/{param}.png')
+        plt.savefig(f'{save_path}/{param}.png') if save_path else plt.show()
         plt.close()
 
     # Plot the evolution of parameters with the others fixed
@@ -69,7 +69,7 @@ def analyse_grid_search(csv_path, save_path=None):
         plt.title(f"Effect of {param} on {target_metric} (Other Params Fixed)")
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{save_path}/varying_{param}.png")
+        plt.savefig(f"{save_path}/varying_{param}.png") if save_path else plt.show()
         plt.close()
 
 
@@ -81,4 +81,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    analyse_grid_search(args.csv_path, args.save_path)
+    run(args.csv_path, args.save_path)
