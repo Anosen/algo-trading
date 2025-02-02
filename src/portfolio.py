@@ -17,11 +17,11 @@ class Portfolio:
     :ivar List[float] portfolio_returns_list: The list of portfolio returns over time.
     """
     
-    def __init__(self, cash=1000.0, crypto=0.0):
+    def __init__(self, cash, crypto):
         """
         Initialize the Portfolio class.
-        :param pd.DataFrame data: The data to use for trading.
-        :param float cash: The initial cash to trade with.
+        :param float cash: The initial cash amount.
+        :param float crypto: The initial crypto amount.
         """
         super().__init__()
         
@@ -39,6 +39,7 @@ class Portfolio:
         self.portfolio_value_list = []  # List of portfolio values over time
         
         self.portfolio_returns_list = []  # List of portfolio returns over time
+
         
     def sell(self, position:Position, date, price, fee):
         self.crypto -= position.quantity
@@ -47,13 +48,17 @@ class Portfolio:
         self.cash_list.append(self.cash)
         self.trades += 1
 
-    def buy(self, date, price, cash, fee, schedueled_exit_date=None, schedueled_exit_price=None, schedueled_exit_returns=None, stop_loss=None):
+    def buy(self, date, price, cash, fee, scheduled_exit_date=None, scheduled_exit_price=None, scheduled_exit_returns=None, stop_loss=None):
         """
         Buy the all the asset cash can buy.
         :param int date: The date of the transaction.
         :param float price: The price of the asset.
         :param float cash: The cash to spend.
         :param float fee: The fee to pay.
+        :param int scheduled_exit_date: The date of scheduled exit.
+        :param int scheduled_exit_price: The price at scheduled exit date.
+        :param int scheduled_exit_returns: The returns at scheduled exit date.
+        :param int stop_loss: The defined stop loss, as a negative percent of cash invested to buy the asset.
         :return float: The quantity bought.
         """
         # Verify that the cash is not greater than the available cash
@@ -76,10 +81,10 @@ class Portfolio:
             cash=cash, 
             fee=fee,
             
-            # Scheduele the exit
-            schedueled_exit_date=schedueled_exit_date,
-            schedueled_exit_price=schedueled_exit_price,
-            schedueled_exit_returns=schedueled_exit_returns,
+            # Schedule the exit
+            scheduled_exit_date=scheduled_exit_date,
+            scheduled_exit_price=scheduled_exit_price,
+            scheduled_exit_returns=scheduled_exit_returns,
             
             # Add a stop loss
             stop_loss=stop_loss,
@@ -120,119 +125,25 @@ class Portfolio:
         """
         Get the value of the portfolio.
         :param float current_price: The current price of the asset.
+        :param float current_fee: The current transaction fee
         :return float: The value of the portfolio.
         """
         return self.cash + self.crypto * current_price * (1 - current_fee)
     
     def get_portfolio_returns(self, current_price, current_fee):
         """
-        Get the returns of the portfolio.
+        Get the returns of the portfolio compared to the initial invested cash.
         :param float current_price: The current price of the asset.
+        :param float current_fee: The current transaction fee
         :return float: The returns of the portfolio.
         """
         return self.get_portfolio_value(current_price, current_fee) - self.initial_cash
-    
-    def get_portfolio_returns_pct(self, current_price):
+
+    def get_portfolio_returns_pct(self, current_price, current_fee):
         """
-        Get the returns percentage of the portfolio.
+        Get the returns percentage of the portfolio compared to the initial invested cash.
         :param float current_price: The current price of the asset.
+        :param float current_fee: The current transaction fee
         :return float: The returns percentage of the portfolio.
         """
-        return self.get_portfolio_returns(current_price) / self.initial_cash
-
-    def should_buy(self, entry_cash, past_prices, predict_prices, past_fees, predict_fees):
-        """
-        A method to determine if we should enter a position, based on the predicted prices.
-        """
-        
-        # Get the current close price
-        current_price = past_prices.iloc[-1]['close']
-        
-        # Get the current fee
-        current_fee = past_fees[-1]
-       
-        # Create a list to store the predicted returns
-        predicted_returns_list = []
-
-        # Iterate over the future prices
-        for i in range(len(predict_prices)):
-            # Get the future close price
-            future_price = predict_prices.iloc[i]['close']
-            
-            # Get the future fee
-            future_fee = predict_fees[i]
-            
-            # Compute the potential returns
-            quantity_held = cash2qty(entry_cash, current_price, current_fee)
-                        
-            returns = compute_returns(entry_cash, quantity_held, future_price, future_fee)
-            
-            predicted_returns_list.append(returns)
-            
-        # Get the maximum returns
-        max_returns = max(predicted_returns_list)
-        
-        # Get the index of the maximum returns
-        max_returns_index = predicted_returns_list.index(max_returns)
-        
-        # Get the date of the maximum returns
-        max_returns_date = predict_prices.iloc[max_returns_index]['unix']
-        
-        # Get the price of the maximum returns
-        max_returns_price = predict_prices.iloc[max_returns_index]['close']
-        
-        if max_returns > 0:
-            return True, max_returns_date, max_returns_price, max_returns
-        else:
-            return False, None, None, None
-    
-    def update(self, past_prices, predict_prices, past_fees, predict_fees):
-        """
-        Apply the policy to update the portfolio.
-        """        
-        # Get the current date
-        current_date = past_prices.iloc[-1]['unix']
-        
-        # Get the current close price
-        current_price = past_prices.iloc[-1]['close']
-        
-        # Get the current fee
-        current_fee = past_fees[-1]
-        
-        # Determine the cash we can spend
-        new_position_cash = self.cash # min(self.cash, max(self.cash * 0.8, 100))
-        
-        # Determine if we should sell any position
-        for position in [pos for pos in self.position_list if pos.active()]:
-            sell_bool, new_schedueled_exit_date, new_schedueled_exit_price, new_schedueled_exit_returns = position.should_sell(past_prices, predict_prices, past_fees, predict_fees)
-            if sell_bool:
-                # Sell
-                self.sell(position, current_date, current_price, current_fee)
-            else:
-                # Update the schedueled exit
-                position.update_schedueled_exit(new_schedueled_exit_date, new_schedueled_exit_price, new_schedueled_exit_returns)
-        
-        # Determine if we should buy a position
-        buy_bool, schedueled_exit_date, schedueled_exit_price, schedueled_exit_returns = self.should_buy(new_position_cash, past_prices, predict_prices, past_fees, predict_fees)
-        if buy_bool:
-            # Buy
-            self.buy(
-                date=current_date, 
-                price=current_price, 
-                cash=new_position_cash, 
-                fee=current_fee,
-                
-                # Scheduele the exit
-                schedueled_exit_date=schedueled_exit_date, 
-                schedueled_exit_price=schedueled_exit_price, 
-                schedueled_exit_returns=schedueled_exit_returns,
-                
-                # Add a stop loss
-                stop_loss=-0.05
-                )
-            
-        # Update the portfolio value
-        self.portfolio_value_list.append(self.get_portfolio_value(current_price, current_fee))
-        
-        # Update the portfolio returns
-        self.portfolio_returns_list.append(self.get_portfolio_returns(current_price, current_fee))
+        return self.get_portfolio_returns(current_price, current_fee) / self.initial_cash

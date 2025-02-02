@@ -8,7 +8,7 @@ class Position:
     :ivar float entry_price: The price the asset was bought at.
     :ivar float entry_cash: The cash spent to enter the position.
     :ivar float quantity: The quantity of asset bought.
-    :ivar int schedueled_exit_date: The date the position is expected to be sold.
+    :ivar int scheduled_exit_date: The date the position is expected to be sold.
     :ivar float scheduled_exit_price: The price the asset is expected to be sold at.
     :ivar float scheduled_returns: The expected returns at the scheduled exit.
     :ivar float stop_loss: The stop loss percentage.
@@ -29,10 +29,10 @@ class Position:
         self.entry_cash = None  # Cash spent to enter the position
         self.quantity = None  # Quantity of asset bought
         
-        # Schedueled selling
-        self.schedueled_exit_date = None  # Schedueled exit date
+        # Scheduled selling
+        self.scheduled_exit_date = None  # Scheduled exit date
         self.scheduled_exit_price = None  # Scheduled exit price
-        self.scheduled_returns = None  # Schedueled returns
+        self.scheduled_returns = None  # Scheduled returns
         
         # Stop loss
         self.stop_loss = None  # Stop loss percentage
@@ -59,7 +59,7 @@ class Position:
             return True
         return False
     
-    def buy(self, date, price, cash, fee, schedueled_exit_date=None, schedueled_exit_price=None, schedueled_exit_returns=None, stop_loss=None):
+    def buy(self, date, price, cash, fee, scheduled_exit_date=None, scheduled_exit_price=None, scheduled_exit_returns=None, stop_loss=None):
         """
         Buy the all the asset cash can buy.
         :param int date: The date of the transaction.
@@ -80,10 +80,10 @@ class Position:
         # Save the entry cash spent
         self.entry_cash = cash
         
-        # Save the schedueled exit
-        self.schedueled_exit_date=schedueled_exit_date
-        self.schedueled_exit_price=schedueled_exit_price
-        self.schedueled_exit_returns=schedueled_exit_returns
+        # Save the scheduled exit
+        self.scheduled_exit_date=scheduled_exit_date
+        self.scheduled_exit_price=scheduled_exit_price
+        self.scheduled_exit_returns=scheduled_exit_returns
         
         # Save the stop loss
         self.stop_loss=stop_loss
@@ -121,21 +121,45 @@ class Position:
     def should_sell(self, past_prices, predict_prices, past_fees, predict_fees):
         """
         Decide whether to sell the asset.
+        :param pd.DataFrame past_prices: The past prices.
+        :param pd.DataFrame predict_prices: The predicted prices.
+        :param list past_fees: The past fees.
+        :param list predict_fees: The predicted fees.
+        :return bool: True if the asset should be sold, False otherwise.
+        Also returns the optimal date, price and returns to sell the asset in the future if it is better than now.
         """
         # Get the current close price
         current_price = past_prices.iloc[-1]['close']
         
-        ### Stop Loss ###
+        # Stop loss
         if self.stop_loss is not None:
             
             # Compute the returns if we sold the asset now
             current_returns_pct = compute_returns(self.entry_cash, self.quantity, current_price, past_fees[-1])/self.entry_cash
             
+            # Check if the stop loss is reached
             if current_returns_pct < self.stop_loss:
                 return True, None, None, None
-       
-       
-        ### Future Potential Returns ###
+        
+        # Compute the future maximal potential returns
+        future_max_returns, max_returns_date, future_max_returns_price, future_max_returns = self._future_returns(predict_prices, predict_fees)
+        
+        # Compute the immediate potential returns
+        immediate_returns = compute_returns(self.entry_cash, self.quantity, current_price, past_fees[-1])      
+        
+        # Compare the immediate returns with the future returns
+        if future_max_returns > immediate_returns and future_max_returns > 0:
+            return False, max_returns_date, future_max_returns_price, future_max_returns
+        else:
+            return True, None, None, None
+        
+    def _future_returns(self, predict_prices, predict_fees):
+        """
+        Compute the future returns.
+        :param pd.DataFrame predict_prices: The predicted prices.
+        :param list predict_fees: The predicted fees.
+        :return tuple: The maximum returns, the date of the maximum returns, the price of the maximum returns and the maximum returns.
+        """
         predicted_returns_list = []
         
         # Iterate over the future prices
@@ -163,24 +187,13 @@ class Position:
         # Get the price of the maximum returns
         future_max_returns_price = predict_prices.iloc[future_max_returns_index]['close']
         
+        return future_max_returns, max_returns_date, future_max_returns_price, future_max_returns
         
-        ### Immediate Potential Returns ###
-        # Get the current fee
-        current_fee = past_fees[-1]
-        
-        # Compute the immediate returns        
-        immediate_returns = compute_returns(self.entry_cash, self.quantity, current_price, current_fee)      
-        
-        # Compare the immediate returns with the future returns
-        if future_max_returns > immediate_returns:
-            return False, max_returns_date, future_max_returns_price, future_max_returns
-        else:
-            return True, None, None, None
     
-    def update_schedueled_exit(self, new_schedueled_exit_date, new_schedueled_exit_price, new_schedueled_exit_returns):
+    def update_scheduled_exit(self, new_scheduled_exit_date, new_scheduled_exit_price, new_scheduled_exit_returns):
         """
-        Update the schedueled exit.
+        Update the scheduled exit.
         """
-        self.schedueled_exit_date = new_schedueled_exit_date  # Scheduled exit date
-        self.schedueled_exit_price = new_schedueled_exit_price  # Expected price at exit
-        self.schedueled_exit_returns = new_schedueled_exit_returns  # Expected returns at exit
+        self.scheduled_exit_date = new_scheduled_exit_date  # Scheduled exit date
+        self.scheduled_exit_price = new_scheduled_exit_price  # Expected price at exit
+        self.scheduled_exit_returns = new_scheduled_exit_returns  # Expected returns at exit

@@ -4,7 +4,7 @@ from src.portfolio import Portfolio
 from src.utils.utils import unix2dt
 
 
-def plot_situation(data, portfolio:Portfolio, hold_fig=True):
+def plot_situation(data, portfolio:Portfolio, predict_len, hold_fig=True, save_path=None):
     # Plot evolution over time
     fig, ax = plt.subplots(2, 1, figsize=(10, 5))
     ax[0].plot(pd.to_datetime(data['unix'], unit='s'), data['close'], color='black', label='Price')
@@ -26,7 +26,7 @@ def plot_situation(data, portfolio:Portfolio, hold_fig=True):
     # Plot the portfolio returns percentage in the same subplot
     ax2 = ax1.twinx()  # Second y-axis
     portfolio_returns_pct_list = [returns / portfolio.initial_cash for returns in portfolio.portfolio_returns_list]
-    ax2.plot(pd.to_datetime(data['unix'], unit='s'), portfolio_returns_pct_list, color='tab:red', label='Portfolio Value')
+    ax2.plot(pd.to_datetime(data['unix'], unit='s'), portfolio_returns_pct_list, color='tab:red', label='Portfolio Returns')
     ax2.set_ylabel('Value (% of invest)', color='tab:red')
     
     # Set the title of the plot
@@ -35,9 +35,16 @@ def plot_situation(data, portfolio:Portfolio, hold_fig=True):
     # Adjust subplots
     plt.subplots_adjust(hspace=0.1)
     plt.tight_layout()
+    fig.text(0.03, 0.95, f'predict_len:{predict_len}', transform=fig.transFigure, fontsize=10, color='black')
     
     fig.legend()
+    
+    if save_path:
+        plt.savefig(save_path)
+    
     if hold_fig:
         plt.show()
     else:
         fig.show()
+
+    plt.close()

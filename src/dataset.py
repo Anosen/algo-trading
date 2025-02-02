@@ -6,31 +6,33 @@ import pandas as pd
 from matplotlib.pyplot import cm
 
 class TsData:
-    def __init__(self, csv_dirs=None, pickle_file=None):
+    def __init__(self, csv_dir_list=None, pickle_file=None, sampling=None):
         """
-        Initialize the TsData class.
-        :param list csv_dirs: A list of directories containing the CSV files. e.g. ['data/cryptoarchive', 'data/kraken', 'data/kaggle']
+        Load a data file containing crypto prices.
+        :param list csv_dir_list: A list of directories containing the CSV files. e.g. ['data/cryptoarchive', 'data/kraken', 'data/kaggle']
         :param str pickle_file: The path to the pickle file containing the data.
         """
         
-        self.csv_dirs = csv_dirs
+        self.csv_dir_list = csv_dir_list
         self.pickle_file = pickle_file
+        self.sampling = sampling
         
         # Get data
-        if self.csv_dirs:
-            self.data_list = self._load_data(self.csv_dirs)
+        if self.csv_dir_list:
+            self.data_list = self._load_data(self.csv_dir_list)
             self.data = self._combine_data(self.data_list)
+            self.data = self._sample_data(self.data, self.sampling)
         elif pickle_file:
             # Load the crypto dataset
             with open(pickle_file, 'rb') as f:
                 self.data = pickle.load(f)
-            print(f'Loaded Pickle of shape {self.data.shape}.')
+            # print(f'Loaded Pickle of shape {self.data.shape}, with columns {self.data.columns}.')
 
     @staticmethod
     def import_csv(data_folder, cols_to_keep=['unix', 'open', 'high', 'low', 'close', 'volume']):
         # Check if the data folder exists
-        if not os.path.exists(data_folder):
-            raise FileNotFoundError(f'{data_folder} not found.')
+        if not os.path.isdir(data_folder):
+            raise IsADirectoryError(f'{data_folder} is not a directory.')
         
         # Get a list of all csv files in the data folder
         csv_files = [file for file in os.listdir(data_folder) if file.endswith('.csv')]
@@ -78,6 +80,20 @@ class TsData:
         
         return crypto
     
+    def _sample_data(self, data, sampling):
+        if not sampling or sampling == 1:
+            return data
+        elif sampling < 0:
+            raise ValueError('Sampling must be a positive integer.')
+        elif sampling > len(data):
+            raise ValueError('Sampling must be less than the length of the data.')
+        
+        # Sample data
+        data = data.iloc[::sampling]
+        print(f'Sampled data to {sampling} intervals.')
+        
+        return data
+    
     def save_pickle(self, path):
         # Save crypto as a pickle file
         with open(path, 'wb') as f:
@@ -124,7 +140,7 @@ class TsData:
         # Plot the missing dates
         missing_dates = self._get_missing_dates(self.data)
         ax.scatter(pd.to_datetime(missing_dates, unit='s'), [0 for _ in missing_dates], s=0.05, color='black')
-        if self.csv_dirs:
+        if self.csv_dir_list:
             colors = cm.rainbow(np.linspace(0, 1, len(self.data_list)))
             idx = 0
             for idx, (data, color) in enumerate(zip(self.data_list, colors)):
